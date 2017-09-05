@@ -1,0 +1,2665 @@
+swagger: '2.0'
+schemes:
+  - https
+host: example.com # Replace with your hostname. You can also specify port e.g. example.com:777
+basePath: /api/v1 # Replace with your basePath. Note: SHOULD begin with '/'.
+info:
+  # Describe your API here, you can use GFM (https://guides.github.com/features/mastering-markdown) here
+  description: |
+    Это документация для API проекта сайта `Достаевский` и системой хранения `ERP`.
+    # Требования к возвращаемым данным
+    * Все даты с сервера должны приходить в формате `yyyy-MM-dd'T'HH:mm:ssZZZZZ`
+      Пример: `2017-12-03T16:30:41+0300`
+  version: '1.0.0'
+  title: Dostaevskiy
+  x-logo:
+    url: 'https://apis.guru/openapi-template/logo.png'
+externalDocs:
+  description: Find out how to create Github repo for your OpenAPI spec.
+  url: 'https://github.com/Rebilly/generator-openapi-repo'
+produces:
+  - application/json
+consumes:
+  - application/json
+tags:
+  - name: Auth
+    description: Авторизация и регистрация
+  - name: Города
+    description: Получение списка городов и выбор города
+  - name: Профиль
+    description: Получение и изменение данных своего профиля
+  - name: Медали
+    description: Получение информации по медалям пользователя
+  - name: Главный экран
+    description: Работа с главным экраном
+  - name: Заказы
+    description: Работа со своими заказами
+  - name: Каталог
+    description: Каталог блюд
+  - name: Корзина
+    description: Корзина
+  - name: Поиск
+    description: Поиск
+  - name: Купоны
+    description: Купоны
+  - name: Акции
+    description: Промо-акции
+  - name: Обновления
+    description: Доступность обновлений
+  - name: Уведомления
+    description: Работа с уведомления
+
+securityDefinitions:
+  api_key:
+    type: apiKey
+    in: header
+    name: X-Auth-token
+
+paths:
+  '/auth/get_guest_token':
+    post:
+      summary: Получить токен доступа для незарегистрированного пользователя
+      description: |
+        Получаем токен при каждом старте приложения, если пользователь
+        не авторизован, отправляя DeviceId. Запрос необходим, чтобы мы могли
+        получать недавние блюда и сохранять заказы пользователя даже если
+        он не зарегистрирован
+      tags:
+        - Auth
+      consumes:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/DeviceIdBody'
+      responses:
+        '200':
+          description: Токен получен
+          schema:
+            $ref: '#/definitions/GuestTokenResponse'
+        default:
+          description: Неожиданная ошибка
+          schema:
+            $ref: '#/definitions/BaseResponse'
+
+  '/auth/send_code':
+    post:
+      summary: Запрос кода на номер телефона
+      description: |
+        Запрос на получение кода подтверждения на номер телефона,
+        повторный запрос можно отправить через N минут
+      consumes:
+        - application/json
+      parameters:
+        - name: X-Auth-token
+          in: header
+          type: string
+          description: Токен
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/PhoneBody'
+      tags:
+        - Auth
+      security:
+        - api_key: []
+      responses:
+        '200':
+          description: Код отправлен
+          schema:
+            $ref: '#/definitions/BaseResponse'
+        default:
+          description: Неожиданная ошибка
+          schema:
+            $ref: '#/definitions/BaseResponse'
+
+  '/auth/check_code':
+    post:
+      summary: Проверка кода подтверждения
+      consumes:
+        - application/json
+      parameters:
+        - name: X-Auth-token
+          in: header
+          type: string
+          description: Токен
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CodeBody'
+      tags:
+        - Auth
+      security:
+        - api_key: []
+      responses:
+        '200':
+          description: Код верный
+          schema:
+            $ref: '#/definitions/CheckCodeResponse'
+        default:
+          description: Неожиданная ошибка
+          schema:
+            $ref: '#/definitions/BaseResponse'
+
+  '/auth/logout':
+    post:
+      summary: Логаут пользователя
+      description: |
+        Не смотря на логаут нам все-равно придет guest_token, которым необходимо
+        будет подписывать дальнейшие запросы.
+      tags:
+        - Auth
+      security:
+        - api_key: []
+      consumes:
+        - application/json
+      parameters:
+        - name: X-Auth-token
+          in: header
+          type: string
+          description: Токен
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/DeviceIdBody'
+      responses:
+        '200':
+          description: Пользователь разлогинен, гостевой токен получен
+          schema:
+            $ref: '#/definitions/GuestTokenResponse'
+        default:
+          description: Неожиданная ошибка
+          schema:
+            $ref: '#/definitions/BaseResponse'
+
+  '/cities':
+    get:
+      summary: Получить список городов, в которых работает приложение
+      tags:
+        - Города
+      security:
+        - api_key: []
+      parameters:
+        - name: X-Auth-token
+          in: header
+          type: string
+          description: Токен
+      responses:
+        '200':
+          description: Список городов
+          schema:
+            $ref: '#/definitions/CitiesListResponce'
+        default:
+          description: Неожиданная ошибка
+          schema:
+            $ref: '#/definitions/BaseResponse'
+    put:
+      summary: Выбрать город
+      tags:
+        - Города
+      security:
+        - api_key: []
+      consumes:
+        - application/json
+      parameters:
+        - name: X-Auth-token
+          in: header
+          type: string
+          description: Токен
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/ChosenCityBody'
+      responses:
+        '200':
+          description: Город выбран
+          schema:
+            $ref: '#/definitions/BaseResponse'
+        default:
+          description: Неожиданная ошибка
+          schema:
+            $ref: '#/definitions/BaseResponse'
+
+  '/profile':
+    get:
+      summary: Получение своего профиля
+      security:
+        - api_key: []
+      tags:
+        - Профиль
+      parameters:
+        - name: X-Auth-token
+          in: header
+          type: string
+          description: Токен
+      responses:
+        '200':
+          description: Профиль получен
+          schema:
+            $ref: '#/definitions/ProfileResponse'
+        default:
+          description: Неожиданная ошибка
+          schema:
+            $ref: '#/definitions/BaseResponse'
+    patch:
+      summary: Изменение своего профиля
+      description: Отправляем только измененные поля
+      tags:
+        - Профиль
+      security:
+        - api_key: []
+      consumes:
+        - multipart/form-data
+      parameters:
+        - name: X-Auth-token
+          in: header
+          type: string
+          description: Токен
+        - name: avatar
+          in: formData
+          type: file
+          description: Новый аватар пользователя
+        - name: name
+          in: formData
+          type: string
+          description: Имя пользователя
+          allowEmptyValue: false
+        - name: phone
+          in: formData
+          type: string
+          description: Телефон пользователя без кода страны
+          allowEmptyValue: false
+        - name: email
+          in: formData
+          type: string
+          description: Email пользователя
+          allowEmptyValue: false
+        - name: push_notifications
+          in: formData
+          type: boolean
+          description: Пользователь может получать push уведомления
+        - name: sms_notifications
+          in: formData
+          type: boolean
+          description: Пользователь может получать СМС рассылку
+      responses:
+        '200':
+          description: Профиль успешно изменен
+          schema:
+            $ref: '#/definitions/ProfileResponse'
+        default:
+          description: Неожиданная ошибка
+          schema:
+            $ref: '#/definitions/BaseResponse'
+
+  '/profile/avatar':
+    delete:
+      summary: Удалить аватар пользователя
+      security:
+        - api_key: []
+      tags:
+        - Профиль
+      parameters:
+        - name: X-Auth-token
+          in: header
+          type: string
+          description: Токен
+      responses:
+        '200':
+          description: Аватар успешно удален
+          schema:
+            $ref: '#/definitions/ProfileResponse'
+        default:
+          description: Неожиданная ошибка
+          schema:
+            $ref: '#/definitions/BaseResponse'
+
+  '/profile/promo_poitns':
+    get:
+      summary: Получить детальный баланс промо-баллов
+      tags:
+        - Профиль
+      security:
+        - api_key: []
+      parameters:
+        - name: X-Auth-token
+          in: header
+          type: string
+          description: Токен
+        - name: limit
+          type: integer
+          in: query
+          description: Limit для получаемых данных
+          default: 30
+        - name: offset
+          type: integer
+          in: query
+          description: Offset для получаемых данных
+      responses:
+        '200':
+          description: Данные получены
+          schema:
+            $ref: '#/definitions/PromoPointsBalanceResponse'
+        default:
+          description: Неожиданная ошибка
+          schema:
+            $ref: '#/definitions/BaseResponse'
+
+  '/profile/base_info':
+    get:
+      summary: Базовая информация профиля
+      description: Получаем информацию для отображения в левом меню
+      tags:
+        - Профиль
+      security:
+        - api_key: []
+      parameters:
+        - name: X-Auth-token
+          in: header
+          type: string
+          description: Токен
+      responses:
+        '200':
+          description: Данные получены
+          schema:
+            $ref: '#/definitions/BaseProfileResponse'
+        default:
+          description: Неожиданная ошибка
+          schema:
+            $ref: '#/definitions/BaseResponse'
+
+  '/achievements':
+    get:
+      summary: Получить список медалей пользователя
+      description: |
+        Медали приходят с сервера отсортированными по проценту выполнения
+        задания. Первыми приходят уже полученные медали в хронрологическом
+        порядке(первая в списке -- последняя полученная пользователем медаль)
+
+        Далее идут невыполненные медали.
+      tags:
+        - Медали
+      security:
+        - api_key: []
+      parameters:
+        - name: X-Auth-token
+          in: header
+          type: string
+          description: Токен
+      responses:
+        '200':
+          description: Получен список медалей
+          schema:
+            $ref: '#/definitions/AchievementsListResponse'
+        default:
+          description: Неожиданная ошибка
+          schema:
+            $ref: '#/definitions/BaseResponse'
+
+  '/achievements/{id}':
+    get:
+      summary: Информация про медаль
+      description: Получить подробную информацию о медали
+      tags:
+        - Медали
+      security:
+        - api_key: []
+      parameters:
+        - name: X-Auth-token
+          in: header
+          type: string
+          description: Токен
+        - name: id
+          in: path
+          type: integer
+          description: id медали
+          required: true
+      responses:
+        '200':
+          description: Данные получены
+          schema:
+            $ref: '#/definitions/AchievementInfoResponse'
+        default:
+          description: Неожиданная ошибка
+          schema:
+            $ref: '#/definitions/BaseResponse'
+
+
+
+  '/dashboard':
+    get:
+      summary: Получить информацию для отображения на главном экране
+      tags:
+        - Главный экран
+      security:
+        - api_key: []
+      parameters:
+        - name: X-Auth-token
+          in: header
+          type: string
+          description: Токен
+      responses:
+        '200':
+          description: Данные получены
+          schema:
+            $ref: '#/definitions/DashboardResponse'
+        default:
+          description: Неожиданная ошибка
+          schema:
+            $ref: '#/definitions/BaseResponse'
+
+  '/orders':
+    get:
+      summary: Список заказов
+      description: Получить список заказов
+      tags:
+        - Заказы
+      security:
+        - api_key: []
+      parameters:
+        - name: X-Auth-token
+          in: header
+          type: string
+          description: Токен
+        - name: limit
+          in: query
+          type: integer
+          default: 30
+          description: Лимит заказов, которые придут с сервера
+        - name: offset
+          in: query
+          type: integer
+          description: Сдвиг по выборке
+          default: 0
+      responses:
+        '200':
+          description: Данные получены
+          schema:
+            $ref: '#/definitions/OrdersListResponse'
+        default:
+          description: Неожиданная ошибка
+          schema:
+            $ref: '#/definitions/BaseResponse'
+
+  '/orders/{id}':
+    get:
+      summary: Информация о заказе
+      description: Получить информацию о заказе
+      tags:
+        - Заказы
+      security:
+        - api_key: []
+      parameters:
+        - name: X-Auth-token
+          in: header
+          type: string
+          description: Токен
+        - name: id
+          in: path
+          type: integer
+          description: id заказа
+          required: true
+      responses:
+        '200':
+          description: Данные получены
+          schema:
+            $ref: '#/definitions/OrderInfoResponse'
+        default:
+          description: Неожиданная ошибка
+          schema:
+            $ref: '#/definitions/BaseResponse'
+
+  '/orders/{id}/rate':
+    post:
+      summary: Оценить заказ
+      description: Оценить заказ
+      tags:
+        - Заказы
+      security:
+        - api_key: []
+      parameters:
+        - name: X-Auth-token
+          in: header
+          type: string
+          description: Токен
+        - name: id
+          in: path
+          type: integer
+          description: id заказа
+          required: true
+        - name: body
+          in: body
+          schema:
+            $ref: '#/definitions/RateOrderBody'
+      responses:
+        '200':
+          description: Данные получены
+          schema:
+            $ref: '#/definitions/BaseResponse'
+        default:
+          description: Неожиданная ошибка
+          schema:
+            $ref: '#/definitions/BaseResponse'
+
+  '/categories':
+    get:
+      summary: Список категорий блюд
+      description: Загрузка списка категорий блюд
+      tags:
+        - Каталог
+      security:
+        - api_key: []
+      parameters:
+        - name: X-Auth-token
+          in: header
+          type: string
+          description: Токен
+      responses:
+        '200':
+          description: Данные получены
+          schema:
+            $ref: '#/definitions/CategoriesResponse'
+        default:
+          description: Неожиданная ошибка
+          schema:
+            $ref: '#/definitions/BaseResponse'
+
+  '/categories/{id}/products':
+    get:
+      summary: Список блюд в категории
+      description: Загрузка списка блюд в выбранно категории
+      tags:
+        - Каталог
+      security:
+        - api_key: []
+      parameters:
+        - name: X-Auth-token
+          in: header
+          type: string
+          description: Токен
+        - name: id
+          in: path
+          type: integer
+          description: id категории блюда
+          required: true
+        - name: limit
+          in: query
+          type: integer
+          default: 30
+          description: Лимит заказов, которые придут с сервера
+        - name: offset
+          in: query
+          type: integer
+          description: Сдвиг по выборке
+          default: 0
+      responses:
+        '200':
+          description: Данные получены
+          schema:
+            $ref: '#/definitions/ProductsResponse'
+        default:
+          description: Неожиданная ошибка
+          schema:
+            $ref: '#/definitions/BaseResponse'
+
+  '/categories/{category_id}/products/{product_id}':
+    get:
+      summary: Информация о блюде
+      description: Получить подробную информацию о блюде
+      tags:
+        - Каталог
+      security:
+        - api_key: []
+      parameters:
+        - name: X-Auth-token
+          in: header
+          type: string
+          description: Токен
+        - name: category_id
+          in: path
+          type: integer
+          description: id категории блюда
+          required: true
+        - name: product_id
+          in: path
+          type: integer
+          description: id блюда
+          required: true
+      responses:
+        '200':
+          description: Данные получены
+          schema:
+            $ref: '#/definitions/ProductInfoResponse'
+        default:
+          description: Неожиданная ошибка
+          schema:
+            $ref: '#/definitions/BaseResponse'
+
+  '/categories/{category_id}/products/{product_id}/topings':
+    get:
+      summary: Топинги для блюд
+      description: |
+        Получить топинги
+      tags:
+        - Каталог
+      security:
+        - api_key: []
+      parameters:
+        - name: X-Auth-token
+          in: header
+          type: string
+          description: Токен
+        - name: category_id
+          in: path
+          type: integer
+          description: id категории блюда
+          required: true
+        - name: product_id
+          in: path
+          type: integer
+          description: id блюда
+          required: true
+      responses:
+        '200':
+          description: Топинги получены
+          schema:
+            $ref: '#/definitions/GetTopingsResponse'
+        default:
+          description: Неожиданная ошибка
+          schema:
+            $ref: '#/definitions/BaseResponse'
+
+  '/cart':
+    post:
+      summary: Валидация корзины
+      description: |
+        Посылаем локальную корзину на сервер для валидации, в должна прийти
+        итоговая стоимость корзины и список продуктов, которые не могут быть
+        доставлены
+      tags:
+        - Корзина
+      security:
+        - api_key: []
+      consumes:
+        - application/json
+      parameters:
+        - name: X-Auth-token
+          in: header
+          type: string
+          description: Токен
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CartValidationBody'
+      responses:
+        '200':
+          description: Корзина проверена
+          schema:
+            $ref: '#/definitions/CartResponse'
+        default:
+          description: Неожиданная ошибка
+          schema:
+            $ref: '#/definitions/BaseResponse'
+
+  '/cart/payment_status':
+    get:
+      summary: Проверка на доступность различных видов платежей
+      description: |
+        Запрос на доступность платежей через курьера или в электронном виде. При
+        недоступности какого то вида необходим текст для пользователя с объяснением причин
+      tags:
+        - Корзина
+      security:
+        - api_key: []
+      parameters:
+        - name: X-Auth-token
+          in: header
+          type: string
+          description: Токен
+      responses:
+        '200':
+          description: Результат проверки
+          schema:
+            $ref: '#/definitions/PaymentStatusResponse'
+        default:
+          description: Неожиданная ошибка
+          schema:
+            $ref: '#/definitions/BaseResponse'
+
+  '/cart/create_order':
+    post:
+      summary: Оформить заказ
+      description: |
+        В теле запроса отправляем дополнительную информацию об адресе, времени
+        доставки, пожеланиях и т.п.
+
+        Если был выбран тип оплаты `online`, то в ответе должна прийти ссылка на
+        страницу оплаты заказа. В другом случае в `payment_url` приходит пустая
+        строка
+      tags:
+        - Корзина
+      security:
+        - api_key: []
+      consumes:
+        - application/json
+      parameters:
+        - name: X-Auth-token
+          in: header
+          type: string
+          description: Токен
+        - name: body
+          in: body
+          description: Параметры для создания заказа
+          schema:
+            $ref: '#/definitions/CreateOrderBody'
+      responses:
+        '200':
+          description: Данные получены
+          schema:
+            $ref: '#/definitions/CreateOrderResponse'
+        default:
+          description: Неожиданная ошибка
+          schema:
+            $ref: '#/definitions/BaseResponse'
+
+  '/cart/bonuses':
+    post:
+      summary: Список бонусов
+      description: |
+        Получить список акций и купонов, которые можно применить к корзине
+        пользователя. Приходят одним списком, к корзине можно применить только
+        один бонусю Сортируется на сервере, в начале списка располагаются
+        бонусы, которые можно применить к корзине, а в конце списка бонусы,
+        которые нельзя применить.
+      tags:
+        - Корзина
+      security:
+        - api_key: []
+      parameters:
+        - name: X-Auth-token
+          in: header
+          type: string
+          description: Токен
+        - name: limit
+          type: integer
+          in: query
+          description: Limit для получаемых данных
+          default: 30
+        - name: offset
+          type: integer
+          in: query
+          description: Offset для получаемых данных
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CartBonusesBody'
+      responses:
+        '200':
+          description: Данные получены
+          schema:
+            $ref: '#/definitions/CartBonusesListResponse'
+        default:
+          description: Неожиданная ошибка
+          schema:
+            $ref: '#/definitions/BaseResponse'
+
+  '/search':
+    get:
+      summary: Данные для поиска
+      description: |
+        Получить список критериев поиска в зависимости от того, с экрана какой
+        категории был вызван поиск.
+      tags:
+        - Поиск
+      security:
+        - api_key: []
+      parameters:
+        - name: X-Auth-token
+          in: header
+          type: string
+          description: Токен
+        - name: category_id
+          type: string
+          in: query
+          required: true
+          description: |
+            id категории
+      responses:
+        '200':
+          description: Теги и подкатегории получены
+          schema:
+            $ref: '#/definitions/SearchInfoResponse'
+        default:
+          description: Неожиданная ошибка
+          schema:
+            $ref: '#/definitions/BaseResponse'
+
+  '/search/categories':
+    post:
+      summary: Поиск категорий
+      tags:
+        - Поиск
+      security:
+        - api_key: []
+      consumes:
+        - application/json
+      description: |
+        Произвести поиск категорий
+
+        `tags_list` и `subcategories_list` могут приходить пустыми, значит в этом
+        случае пользователь не выбрал ни одного тега или подкатегории
+        соответственно.
+
+        В `query` передается поисковая подстрока, может прийти пустой.
+
+        Теоретически, пользователь может вобще ничего не послать и ему просто
+        вернется список всех блюд.
+      parameters:
+        - name: X-Auth-token
+          in: header
+          type: string
+          description: Токен
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/SearchBody'
+      responses:
+        '200':
+          description: Поиск прошел успешно
+          schema:
+            $ref: '#/definitions/CategoriesResponse'
+        default:
+          description: Неожиданная ошибка
+          schema:
+            $ref: '#/definitions/BaseResponse'
+  '/search/categories/{id}':
+    post:
+      summary: Поиск продуктов
+      description: |
+        Поиск продуктов в категории
+
+        `tags_list` и `subcategories_list` могут приходить пустыми, значит в этом
+        случае пользователь не выбрал ни одного тега или подкатегории
+        соответственно.
+
+        В `query` передается поисковая подстрока, может прийти пустой.
+      tags:
+        - Поиск
+      security:
+        - api_key: []
+      consumes:
+        - application/json
+      parameters:
+        - name: X-Auth-token
+          in: header
+          type: string
+          description: Токен
+        - name: id
+          in: path
+          required: true
+          type: string
+          description: id категории
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/SearchBody'
+        - name: limit
+          in: query
+          type: integer
+          default: 30
+          description: Лимит заказов, которые придут с сервера
+        - name: offset
+          in: query
+          type: integer
+          description: Сдвиг по выборке
+          default: 0
+      responses:
+        '200':
+          description: Поиск прошел успешно
+          schema:
+            $ref: '#/definitions/ProductsResponse'
+        default:
+          description: Неожиданная ошибка
+          schema:
+            $ref: '#/definitions/BaseResponse'
+
+  '/coupons':
+    get:
+      summary: Список купонов
+      description: Получить список купонов
+      tags:
+        - Купоны
+      security:
+        - api_key: []
+      parameters:
+        - name: X-Auth-token
+          in: header
+          type: string
+          description: Токен
+        - name: limit
+          type: integer
+          in: query
+          description: Limit для получаемых данных
+          default: 30
+        - name: offset
+          type: integer
+          in: query
+          description: Offset для получаемых данных
+      responses:
+        '200':
+          description: Данные получены
+          schema:
+            $ref: '#/definitions/CouponsListResponse'
+        default:
+          description: Неожиданная ошибка
+          schema:
+            $ref: '#/definitions/BaseResponse'
+    post:
+      summary: Добавить купон
+      description: Добавить купон используя специальный код
+      tags:
+        - Купоны
+      security:
+        - api_key: []
+      consumes:
+        - application/json
+      parameters:
+        - name: X-Auth-token
+          in: header
+          type: string
+          description: Токен
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/AddCouponBody'
+      responses:
+        '200':
+          description: Купон добавлен
+          schema:
+            $ref: '#/definitions/AddCouponResponse'
+        default:
+          description: Неожиданная ошибка
+          schema:
+            $ref: '#/definitions/BaseResponse'
+
+  '/coupons/{coupon_id}':
+    get:
+      summary: Информация про купон
+      description: Получить полную информацию о купоне
+      tags:
+        - Купоны
+      security:
+        - api_key: []
+      parameters:
+        - name: X-Auth-token
+          in: header
+          type: string
+          description: Токен
+        - name: coupon_id
+          in: path
+          required: true
+          type: string
+          description: id купона
+      responses:
+        '200':
+          description: Данные получены
+          schema:
+            $ref: '#/definitions/CouponInfoResponse'
+        default:
+          description: Неожиданная ошибка
+          schema:
+            $ref: '#/definitions/BaseResponse'
+
+  '/promo_actions':
+    get:
+      summary: Список промо акций
+      description: Получить список промо акций
+      tags:
+        - Акции
+      security:
+        - api_key: []
+      parameters:
+        - name: X-Auth-token
+          in: header
+          type: string
+          description: Токен
+        - name: limit
+          type: integer
+          in: query
+          description: Limit для получаемых данных
+          default: 30
+        - name: offset
+          type: integer
+          in: query
+          description: Offset для получаемых данных
+      responses:
+        '200':
+          description: Данные получены
+          schema:
+            $ref: '#/definitions/ActionsListResponse'
+        default:
+          description: Неожиданная ошибка
+          schema:
+            $ref: '#/definitions/BaseResponse'
+
+  '/promo_actions/{action_id}':
+    get:
+      summary: Информация про акцию
+      description: Получить полную информацию об акции
+      tags:
+        - Акции
+      security:
+        - api_key: []
+      parameters:
+        - name: X-Auth-token
+          in: header
+          type: string
+          description: Токен
+        - name: action_id
+          in: path
+          required: true
+          type: string
+          description: id акции
+      responses:
+        '200':
+          description: Данные получены
+          schema:
+            $ref: '#/definitions/ActionInfoResponse'
+        default:
+          description: Неожиданная ошибка
+          schema:
+            $ref: '#/definitions/BaseResponse'
+
+  '/update':
+    post:
+      summary: Информация о доступности обновлений
+      description: Запросить информацию о доступности обновлений
+      tags:
+        - Обновления
+      security:
+        - api_key: []
+      parameters:
+        - name: X-Auth-token
+          in: header
+          type: string
+          description: Токен
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/UpdateInfoBody'
+      responses:
+        '200':
+          description: Данные получены
+          schema:
+            $ref: '#/definitions/UpdateInfoResponse'
+        default:
+          description: Неожиданная ошибка
+          schema:
+            $ref: '#/definitions/BaseResponse'
+
+  '/notifications':
+    get:
+      summary: Получить данные с текущими уведомлениями
+      description: Запросить информацию о текущих уведомлениях
+      tags:
+        - Уведомления
+      security:
+        - api_key: []
+      parameters:
+        - name: X-Auth-token
+          in: header
+          type: string
+          description: Токен
+      responses:
+        '200':
+          description: Данные получены
+          schema:
+            $ref: '#/definitions/NotificationsInfoResponse'
+        default:
+          description: Неожиданная ошибка
+          schema:
+            $ref: '#/definitions/BaseResponse'
+
+
+definitions:
+  #-----------------------------------------------------------------------------
+  #
+  #   Bodies
+  #
+  #-----------------------------------------------------------------------------
+
+  PhoneBody:
+    type: object
+    description: Передаваемый объект
+    properties:
+      phone:
+        type: string
+        description: Номер телефона без +7
+    required:
+      - phone
+
+  UpdateInfoBody:
+    type: object
+    description: Передаваемый объект
+    properties:
+      platform:
+        type: string
+        description: Платформа приложения
+        enum:
+          - ios
+          - android
+      version:
+        type: string
+        description: Версия приложения
+      build:
+        type: string
+        description: Номер билда приложения
+    required:
+      - platform
+      - version
+      - build
+
+  DeviceIdBody:
+    type: object
+    description: Передаваемый объект
+    properties:
+      device_id:
+        type: string
+        description: Id устройства
+    required:
+      - device_id
+
+  CodeBody:
+    type: object
+    description: Передаваемый объект
+    properties:
+      code:
+        type: string
+        description: Код подтверждения, высланный в СМС
+      phone:
+        type: string
+        description: Номер телефона без +7
+    required:
+      - code
+      - phone
+
+  ChosenCityBody:
+    type: object
+    description: id выбранного города
+    properties:
+      city_id:
+        type: string
+    required:
+      - city_id
+
+  CreateOrderBody:
+    type: object
+    description: Модель для информации которая нужна чтобы создать заказ
+    properties:
+      cart:
+        $ref: '#/definitions/CartValidationBody'
+      cutlery_amount:
+        type: integer
+        description: Количество столовых приборов к заказу
+        minimum: 0
+        maximum: 10
+      pack_rolls_separately:
+        type: boolean
+        description: Упаковать роллы по отдельности
+      address:
+        $ref: '#/definitions/AddressModel'
+      customer_name:
+        type: string
+        description: Имя покупателя
+      customer_phone:
+        type: string
+        description: Номер телефона покупателя без кода страны
+      payment_type:
+        type: string
+        description: Способ оплаты заказа
+        enum:
+          - cash
+          - card
+          - online
+      need_change_for:
+        type: integer
+        description: |
+          С какой суммы нужна сдача, отправляется только если выбрана оплата
+          наличными. В остальных случаях отправляем 0
+      delivery_type:
+        type: string
+        description: |
+          Тип времени доставки, либо на ближайшее время, либо к
+          определенному времени
+        enum:
+          - nearest_time
+          - certain_time
+      delivery_time:
+        type: string
+        format: date
+        description: |
+          Время, к которому необходимо будет доставить заказ. Отправляемтся
+          только если выбран тип доставки к определенному времени, иначе
+          отправляем пустую строку
+      pay_with_promo_points:
+        type: boolean
+        description: Оплатить заказ промо-баллами
+      confirm_order_by_phone:
+        type: boolean
+        description: Хочу подтвердить заказ по телефону с оператором
+
+  SearchBody:
+    type: object
+    description: Модель, которую отправляем на сервер, чтобы получить результаты
+    properties:
+      query:
+        type: string
+        description: Поисковая подстрока
+      tags_list:
+        type: array
+        description: |
+          Массив id тегов продуктов, которые выбрал пользователь на экране поиска
+        items:
+          type: string
+      subcategories_list:
+        type: array
+        description: |
+          Массив id подкатегорий, которые выбрал пользователь на экране поиска
+        items:
+          type: string
+      ingredients_list:
+        type: array
+        description: |
+          Массив id ингредиентов, которые выбрал пользователь на экране поиска
+        items:
+          type: string
+
+  CartValidationBody:
+    type: object
+    description: Данные, которые необходимы для валидации корзины на сервере
+    properties:
+      selected_bonus_id:
+        type: string
+        default: ''
+        description: |
+          id уже примененного к корзине бонуса.
+      product_groups:
+        type: array
+        items:
+          type: object
+          properties:
+            product_id:
+              type: string
+              description: id продукта
+            category_id:
+              type: string
+              description: id категории продукта
+            amount:
+              type: integer
+              description: Количество товаров в данной группе
+            product_cart_id:
+              type: string
+              description: |
+                Специальный id для группы блюд в корзине, должен быть уникальным
+                для каждой группы.
+            excluded_ingridients:
+              type: array
+              description: Массив исключенных ингридиентов
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: id ингридиента
+            topings:
+              type: array
+              description: Топинги которые добавлены к блюдам
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: id топинга
+                  quantity:
+                    type: integer
+                    description: Количество топингов данного вида
+  CartBonusesBody:
+    type: object
+    description: |
+      Данные, которые необходимы для получения спика бонусов для корзины
+    properties:
+      product_groups:
+        type: array
+        items:
+          type: object
+          properties:
+            product_id:
+              type: string
+              description: id продукта
+            category_id:
+              type: string
+              description: id категории продукта
+            amount:
+              type: integer
+              description: Количество товаров в данной группе
+            product_cart_id:
+              type: string
+              description: |
+                Специальный id для группы блюд в корзине, должен быть уникальным
+                для каждой группы.
+            topings:
+              type: array
+              description: Топинги которые добавлены к блюдам
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: id топинга
+                  quantity:
+                    type: integer
+                    description: Количество топингов данного вида
+
+
+  AddCouponBody:
+    type: object
+    description: Промо код для добавления купона
+    properties:
+      coupon_code:
+        type: string
+        description: Код для добавления купона
+
+  RateOrderBody:
+    type: object
+    description: Оценка заказа
+    properties:
+      rating:
+        type: integer
+        description: Оценка по пятибальной шкале
+
+
+
+
+  #-----------------------------------------------------------------------------
+  #
+  #   Responses
+  #
+  #-----------------------------------------------------------------------------
+
+  BaseResponse:
+    type: object
+    description: Получаемый объект
+    properties:
+      code:
+        type: integer
+        format: int32
+        description: |
+          Код ответа сервера 0 - ошибка, 1 - успех, 105 - для пользователя не выбран город, возможны специальные коды
+      message:
+        type: string
+        description: |
+          Сообщение от сервера, если запрос успешно прошел, то приходит пустая
+          строка
+
+  GuestTokenResponse:
+    type: object
+    description: Гостевой токен для незарегистрированного пользователя, им необходимо будет подписывать все запросы
+    allOf:
+      - $ref: '#/definitions/BaseResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/definitions/GuestTokenModel'
+
+  UpdateInfoResponse:
+    type: object
+    description: Информация о доступности обновлений для приложения
+    allOf:
+      - $ref: '#/definitions/BaseResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/definitions/UpdateInfoModel'
+
+  NotificationsInfoResponse:
+    type: object
+    description: Информация с текущим текстом уведомления
+    allOf:
+      - $ref: '#/definitions/BaseResponse'
+      - type: object
+        properties:
+          data:
+            type: object
+            properties:
+              text:
+                type: string
+                description: Строка для показа пользователю в уведомлении
+
+
+  CheckCodeResponse:
+    type: object
+    description: Токен для зарегистрированного пользователя
+    allOf:
+      - $ref: '#/definitions/BaseResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/definitions/CheckCodeModel'
+
+  CitiesListResponce:
+    type: object
+    description: Список городов, с которых работает сервис
+    allOf:
+      - $ref: '#/definitions/BaseResponse'
+      - type: object
+        properties:
+          data:
+            type: object
+            properties:
+              Города:
+                type: array
+                items:
+                  $ref: '#/definitions/CityModel'
+
+  ProfileResponse:
+    type: object
+    description: Профиль пользователя
+    allOf:
+      - $ref: '#/definitions/BaseResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/definitions/ProfileModel'
+
+  PromoPointsBalanceResponse:
+    type: object
+    description: Баланс баллов ползователя
+    allOf:
+      - $ref: '#/definitions/BaseResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/definitions/PromoPointsBalanceModel'
+
+  BaseProfileResponse:
+    type: object
+    description: Профиль пользователя
+    allOf:
+      - $ref: '#/definitions/BaseResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/definitions/BaseProfileModel'
+
+  AchievementsListResponse:
+    type: object
+    description: Список медалей пользователя
+    allOf:
+      - $ref: '#/definitions/BaseResponse'
+      - type: object
+        properties:
+          data:
+            type: object
+            properties:
+              achievements:
+                type: array
+                items:
+                  $ref: '#/definitions/AchievementItemModel'
+
+  AchievementInfoResponse:
+    type: object
+    description: Профиль пользователя
+    allOf:
+      - $ref: '#/definitions/BaseResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/definitions/AchievementInfoModel'
+
+  DashboardResponse:
+    type: object
+    description: Информация для главного экрана
+    allOf:
+      - $ref: '#/definitions/BaseResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/definitions/DashboardModel'
+
+  OrdersListResponse:
+    type: object
+    description: Список заказов пользователя
+    allOf:
+      - $ref: '#/definitions/BaseResponse'
+      - type: object
+        properties:
+          data:
+            type: object
+            properties:
+              total:
+                type: integer
+                description: Всего заказов
+              orders:
+                type: array
+                items:
+                  $ref: '#/definitions/BaseOrderModel'
+
+  OrderInfoResponse:
+    type: object
+    description: Информация о заказе пользователя
+    allOf:
+      - $ref: '#/definitions/BaseResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/definitions/OrderInfoModel'
+
+  CategoriesResponse:
+    type: object
+    description: Список категорий блюд
+    allOf:
+      - $ref: '#/definitions/BaseResponse'
+      - type: object
+        properties:
+          data:
+            type: object
+            properties:
+              categories:
+                type: array
+                items:
+                  $ref: '#/definitions/ProductCategoryModel'
+
+  ProductsResponse:
+    type: object
+    description: Список блюд
+    allOf:
+      - $ref: '#/definitions/BaseResponse'
+      - type: object
+        properties:
+          data:
+            type: object
+            properties:
+              total:
+                type: integer
+                description: Всего блюд
+              products:
+                type: array
+                items:
+                  $ref: '#/definitions/BaseProductModel'
+
+  ProductInfoResponse:
+    type: object
+    description: Подробная информация о блюде
+    allOf:
+      - $ref: '#/definitions/BaseResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/definitions/ProductInfoModel'
+
+  CartResponse:
+    type: object
+    description: Корзина пользователя
+    allOf:
+      - $ref: '#/definitions/BaseResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/definitions/CartModel'
+
+
+  PaymentStatusResponse:
+    type: object
+    description: Доступны ли все виды платежей
+    allOf:
+      - $ref: '#/definitions/BaseResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/definitions/PaymentStatusModel'
+
+  CartBonusesListResponse:
+    type: object
+    allOf:
+      - $ref: '#/definitions/BaseResponse'
+      - type: object
+        properties:
+          data:
+            type: object
+            properties:
+              total:
+                type: integer
+                description: Количество результатов в выдаче
+              bonuses:
+                type: array
+                description: Список бонусов применительно к корзине
+                items:
+                  $ref: '#/definitions/CartBonusModel'
+
+  CreateOrderResponse:
+    type: object
+    description: |
+      Модель описывающая данные, которые приходят после успешного создания
+      заказа.
+    allOf:
+      - $ref: '#/definitions/BaseResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/definitions/CreateOrderModel'
+
+  SearchInfoResponse:
+    type: object
+    description: |
+      Модель описывающая данные, которые приходят после успешного создания
+      заказа.
+    allOf:
+      - $ref: '#/definitions/BaseResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/definitions/SearchInfoModel'
+
+  GetTopingsResponse:
+    type: object
+    description: |
+      Описывает данные получаемые на экране добавления топингов на который
+      переходим с карточки товара
+    allOf:
+      - $ref: '#/definitions/BaseResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/definitions/ProductTopingsModel'
+
+  CouponsListResponse:
+    type: object
+    description: Список купонов пользователя
+    allOf:
+      - $ref: '#/definitions/BaseResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/definitions/CouponsListModel'
+
+  AddCouponResponse:
+    type: object
+    description: Приходит после успешного добавления купона
+    allOf:
+      - $ref: '#/definitions/BaseResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/definitions/CouponsListItemModel'
+
+  CouponInfoResponse:
+    type: object
+    description: Информация про конкретный купон
+    allOf:
+      - $ref: '#/definitions/BaseResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/definitions/CouponInfoModel'
+
+  ActionsListResponse:
+    type: object
+    description: Список акций пользователя
+    allOf:
+      - $ref: '#/definitions/BaseResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/definitions/ActionsListModel'
+
+  ActionInfoResponse:
+    type: object
+    description: Информация про конкретный купон
+    allOf:
+      - $ref: '#/definitions/BaseResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/definitions/ActionInfoModel'
+
+
+  #-----------------------------------------------------------------------------
+  #
+  #   Models
+  #
+  #-----------------------------------------------------------------------------
+
+  GuestTokenModel:
+    type: object
+    properties:
+      token:
+        type: string
+        description: Гостевой токен
+    required:
+      - token
+
+  UpdateInfoModel:
+    type: object
+    properties:
+      status:
+        type: string
+        description: Статус доступности обновления
+        enum:
+          - available
+          - not-available
+    required:
+      - status
+
+  CheckCodeModel:
+    type: object
+    properties:
+      token:
+        type: string
+        description: Токен пользователя, которым подписываем запросы
+    required:
+      - token
+
+  CityModel:
+    type: object
+    properties:
+      id:
+        type: string
+        description: id города
+      name:
+        type: string
+        description: Название города
+      lat:
+        type: double
+        description: Широта города
+      long:
+        type: double
+        description: Долгота города
+    required:
+      - id
+      - name
+
+  ProfileModel:
+    type: object
+    properties:
+      avatar:
+        type: string
+        description: Ссылка на аватар пользователя
+        default: ''
+      name:
+        type: string
+        description: Имя пользователя
+      phone:
+        type: string
+        description: Телефонный номер без кода страны (+7)
+      phone_confirmed:
+        type: boolean
+        description: Подтвержден ли номер телефона
+      email:
+        type: string
+        description: Email пользователя
+      promo_poitns:
+        type: integer
+        description: Количество накопленных баллов
+      push_notifications:
+        type: boolean
+        description: Пользователь может получать пуш-уведомления
+      sms_notifications:
+        type: boolean
+        description: Пользователь может получать СМС рассылку
+    required:
+      - avatar
+      - name
+      - phone
+      - promo_poitns
+      - phone_confirmed
+      - push_notifications
+      - sms_notifications
+
+  PromoPointsBalanceModel:
+    type:
+      object
+    properties:
+      total_points:
+        type: integer
+        description: Баланс баллов
+      total:
+        type: integer
+        description: Количество результатов в выдаче
+      transactions:
+        type: array
+        description: |
+          Массив начислений и списаний баллов, должен приходить в
+          хронологическом порядке по убыванию даты.
+        items:
+          type: object
+          properties:
+            title:
+              type: string
+              description: Заголовок транзакции, например "Начилено за заказ"
+            description:
+              type: string
+              description: Описание транзакции, например "Дата заказа 01.01"
+            amount:
+              type: string
+              description: |
+                Количество баллов, приходит со знаком "+" или "-",
+                например "+1000"
+
+  BaseProfileModel:
+    type: object
+    properties:
+      name:
+        type: string
+        description: Имя пользователя
+      avatar:
+        type: string
+        default: ''
+        description: Ссылка на аватар пользователя
+      city:
+        type: string
+        description: Выбранный город
+      recent_achievment:
+        $ref: '#/definitions/AchievementItemModel'
+    required:
+      - name
+      - avatar
+      - city
+
+  AchievementItemModel:
+    type: object
+    description: |
+      Модель описывающая медаль для списка медалей или медаль в левом меню
+    properties:
+      id:
+        type: string
+        description: id медали
+      image:
+        type: string
+        description: Ссылка на картинку для медали
+      title:
+        type: string
+        description: Название медали
+      reached:
+        type: boolean
+        description: Получена медаль или нет
+    required:
+      - id
+      - image
+      - title
+      - reached
+
+  AchievementInfoModel:
+    type: object
+    description: |
+      Модель описывающая подробную информацию про медаль
+    properties:
+      id:
+        type: string
+        description: id ачивки
+      image:
+        type: string
+        description: Ссылка на картинку для медали
+      title:
+        type: string
+        description: Название ачивки
+      reached:
+        type: boolean
+        description: Получена медаль или нет
+      description:
+        type: string
+        description: Поясняющий текст к медали
+      percent:
+        type: integer
+        minimum: 0
+        maximum: 100
+        description: Процент выполнения цели
+      goal:
+        $ref: '#/definitions/AchievementGoalModel'
+      reward:
+        $ref: '#/definitions/AchievementRewardModel'
+    required:
+      - id
+      - image
+      - title
+      - reached
+      - description
+      - percent
+      - goal
+      - reward
+
+  AchievementGoalModel:
+    type: object
+    description: Цель на экране медали, например `Куплено пицц 2/6`
+    properties:
+      name:
+        type: string
+        description: Название цели `Куплено пицц`
+      done:
+        type: integer
+        description: Сколько выполнено `2`
+      total:
+        type: integer
+        description: Сколько надо выполнить `6`
+
+  AchievementRewardModel:
+    type: object
+    description: Награда за получение медали
+    properties:
+      id:
+        type: string
+        description: id купона
+      name:
+        type: string
+        description: Название купона
+      image:
+        type: string
+        description: Картинка купона
+      finish_date:
+        type: string
+        description: Дата окончания купона
+        format: date
+
+
+  DashboardModel:
+    type: object
+    properties:
+      promo_actions:
+        type: array
+        description: Список горячих предложений
+        items:
+          $ref: '#/definitions/PromoActionModel'
+      active_orders:
+        type: array
+        description: Список активных заказов
+        items:
+          $ref: '#/definitions/BaseOrderModel'
+      categories:
+        type: array
+        description: Список категорий блюд
+        items:
+          $ref: '#/definitions/ProductCategoryModel'
+      recent_products:
+        type: array
+        description: Блок "Вы заказывали ранее"
+        items:
+          $ref: '#/definitions/BaseProductModel'
+      recomended_products:
+        type: array
+        description: Блок "Достаевский рекомендует"
+        items:
+          $ref: '#/definitions/BaseProductModel'
+
+
+  PromoActionModel:
+    type: object
+    properties:
+      id:
+        type: string
+        description: id промо-акции
+      image:
+        type: string
+        description: Ссылка на картинку промо-акции
+      title:
+        type: string
+        description: Название промо-акции
+      description_short:
+        type: string
+        description: Короткое описание промо-акции для главного экрана
+      description_full:
+        type: string
+        description: Полное описание промо-акции для отдельного экрана
+      finish_date:
+        type: string
+        format: date
+        description: Дата окончания
+    required:
+      - id
+      - title
+
+  BaseOrderModel:
+    type: object
+    description: |
+      Базовая модель заказа, используется на главном экране и экране заказов
+    properties:
+      id:
+        type: string
+        description: id заказа
+      order_nuber:
+        type: string
+        description: |
+          Номер заказа(Вполне может быть, что он не нужен и номер это то же
+          самое, что и ID **УТОЧНИТЬ**)
+      products_quantity:
+        type: integer
+        description: Количество позиций в заказе
+      total_price:
+        type: integer
+        description: Цена заказа
+      current_status:
+        type: string
+        description: Текущий статус заказа (**УТОЧНИТЬ СТАТУСЫ**)
+        enum:
+          - NEW
+          - DELIVERED
+      create_date:
+        type: string
+        format: date
+        description: Дата и время создания заказа
+      current_status_date:
+        type: string
+        format: date
+        description: Дата и время, когда заказ перешел в текущее состояние
+      next_status_date:
+        type: string
+        format: date
+        description: |
+          Дата и время, когда заказ предположительно перейдет в следующий статус
+      rated:
+        type: boolean
+        description: Оценен ли заказ
+    required:
+      - id
+      - order_nuber
+      - products_quantity
+      - total_price
+      - current_status
+      - create_date
+      - current_status_date
+      - rated
+
+  OrderInfoModel:
+    type: object
+    description: Подробная информация о заказе
+    allOf:
+      - $ref: '#/definitions/BaseOrderModel'
+      - type: object
+        properties:
+          address:
+            $ref: '#/definitions/AddressModel'
+          receiver_name:
+            type: string
+            description: Имя получателя
+          receiver_phone:
+            type: string
+            description: Телефон пользователя без кода страны
+          payment_type:
+            type: string
+            description: Способ оплаты заказа
+            enum:
+              - cash
+              - card
+              - online
+          product_groups:
+            type: array
+            description: Список групп блюд в заказе
+            items:
+              $ref: '#/definitions/CartProductGroupModel'
+          has_rolls:
+            type: boolean
+            description: |
+              Содержит ли корзина роллы. Нужно чтобы определять показывать ли
+              галочку "Упаковать роллы по отдельности при оформлении корзины"
+        required:
+            - receiver_phone
+            - receiver_name
+            - payment_type
+            - address
+            - products
+            - has_rolls
+
+
+  ProductCategoryModel:
+    type: object
+    properties:
+      id:
+        type: string
+        description: id категории блюда
+      name:
+        type: string
+        description: Название категории
+      image:
+        type: string
+        description: Ссылка на картинку для категории
+      availability_start:
+        type: string
+        format: date
+        description: Время начала доступности этой категории
+      availability_end:
+        type: string
+        format: date
+        description: Время окончания доступности этой категории
+    required:
+      - id
+      - name
+      - image
+
+  BaseProductModel:
+    type: object
+    description: Базовая модель блюда, используется в каталоге и предлагаемых
+    properties:
+      id:
+        type: string
+        description: id блюда
+      category_id:
+        type: string
+        description: id категории
+      image:
+        $ref: '#/definitions/ImageModel'
+      name:
+        type: string
+        description: Название блюда
+      price:
+        type: float
+        description: Цена блюда
+      weight:
+        type: integer
+        description: Вес блюда в граммах
+      tags:
+        type: array
+        description: Список тегов блюда
+        items:
+          $ref: '#/definitions/ProductTagModel'
+      nutrition_facts:
+        $ref: '#/definitions/NutritionFactsModel'
+      ingridients:
+        description: Список ингридиентов для товара
+        type: array
+        items:
+          $ref: '#/definitions/ProductIngridientItemModel'
+    required:
+      - id
+      - category_id
+      - name
+      - price
+
+  ImageModel:
+    type: object
+    description: |
+      Модель для картинки блюда, либо медали, включает в себя ссылки на
+      изображения в разных разрешениях.
+    properties:
+      small:
+        type: string
+      medium:
+        type: string
+      large:
+        type: string
+
+  ProductInfoModel:
+    type: object
+    description: Подробная информация о блюде
+    allOf:
+      - $ref: '#/definitions/BaseProductModel'
+      - type: object
+        properties:
+          similar_products:
+            type: array
+            description: Список "С этим покупают" блюд
+            items:
+              $ref: '#/definitions/BaseProductModel'
+
+  NutritionFactsModel:
+    type: object
+    description: |
+      Модель описывающая калорийность и белки жиры и углеводы в блюде
+    properties:
+      protein:
+        type: number
+        format: float
+        description: Белки, г.
+      fat:
+        type: number
+        format: float
+        description: Жиры, г.
+      сarbohydrates:
+        type: number
+        format: float
+        description: Углеводы, г.
+      calories:
+        type: integer
+        description: Сколько Ккал на 100г продукта
+
+  CartProductGroupModel:
+    type: object
+    description: Модель блюда для корзины
+    properties:
+      product:
+        $ref: '#/definitions/BaseProductModel'
+      amount:
+        type: integer
+        description: Количество товаров в данной группе
+      product_cart_id:
+        type: string
+        description: |
+          Специальный id для группы блюд в корзине, должен быть уникальным
+          для каждой группы.
+      excluded_ingridients:
+        type: array
+        description: Массив исключенных ингридиентов
+        items:
+          $ref: '#/definitions/ProductIngridientItemModel'
+      price:
+        type: integer
+        description: Цена группы
+      weight:
+        type: integer
+        description: Вес группы
+      topings:
+        type: array
+        description: Топинги которые добавлены к блюдам
+        items:
+          $ref: '#/definitions/ProductTopingItemModel'
+
+  ProductTopingItemModel:
+    type: object
+    properties:
+      id:
+        type: string
+        description: id топинга
+      name:
+        type: string
+        description: Название топинга
+      weight:
+        type: integer
+        description: Вес топинга в граммах
+      price:
+        type: integer
+        description: Цена топинга в рублях за шт
+
+  ProductIngridientItemModel:
+    type: object
+    properties:
+      id:
+        type: string
+        description: id ингридиента
+      name:
+        type: string
+        description: Название ингридиента
+      optional:
+        type: boolean
+        description: Если `true`, то ингридиент может быть исключен из блюда
+
+  ProductTagModel:
+    type: object
+    description: Тэг блюда
+    properties:
+      id:
+        type: string
+        description: id тега
+      name:
+        type: string
+        description: Имя тега
+      image:
+        type: string
+        description: |
+          Ссылка на изображение тега, которое показываем на карточке блюда
+          и экране блюда
+    required:
+      - id
+      - name
+      - image
+
+  CartModel:
+    type: object
+    description: Корзина пользователя
+    properties:
+      can_order:
+        type: boolean
+        description: Может ли пользователь сделать заказ
+      phone:
+        type: string
+        description: Телефон для связи с оператором, если нельзя заказать в приложении
+      has_rolls:
+        type: boolean
+        description: |
+          Содержит ли корзина роллы. Нужно чтобы определять показывать ли
+          галочку "Упаковать роллы по отдельности при оформлении корзины"
+      total_price:
+        type: integer
+        description: Цена корзины с учетом всех акций и скидок
+      total_weight:
+        type: integer
+        description: Общий вес блюд в корзине
+      product_groups:
+        type: array
+        description: Список групп блюд в корзине
+        items:
+          $ref: '#/definitions/CartProductGroupModel'
+      selected_bonus:
+        description: Выбранный для корзины бонус
+        $ref: '#/definitions/CartBonusModel'
+      available_bonuses_amount:
+        type: integer
+        description: Количество доступных бонусов
+      missing_products:
+        type: array
+        description: |
+          Список блюд, которые невозможно доставить по каким-либо
+          причинам. Соответствующие группы продуктов должны быть удалены из корзины
+        items:
+          $ref: '#/definitions/BaseProductModel'
+      missing_topings:
+        type: array
+        description: |
+          Список топингов, которые невозможно доставить по каким-либо
+          причинам. Соответствующие топинги продуктов должны быть удалены из
+          корзины
+        items:
+          type: object
+          description: Модель топинга
+          properties:
+            id:
+              type: string
+              description: id топинга
+            name:
+              type: string
+              description: Название топинга
+            weight:
+              type: integer
+              description: Вес топинга
+            price:
+              type: integer
+              description: Цена топинга
+
+  PaymentStatusModel:
+    type: object
+    description: Доступны ли виды платежей
+    properties:
+      cash:
+        $ref: '#/definitions/PaymentStatusNode'
+      courier:
+        $ref: '#/definitions/PaymentStatusNode'
+      online:
+        $ref: '#/definitions/PaymentStatusNode'
+
+  PaymentStatusNode:
+    type: object
+    description: Элемент модели статуса платежа
+    properties:
+      is_available:
+        type: boolean
+        description: Доступен ли вид платежа
+      description:
+        type: string
+        description: Описание недоступности вида оплаты
+
+  CartBonusModel:
+    type: object
+    properties:
+      id:
+        type: string
+        description: id бонуса
+      type:
+        type: string
+        description: Тип бонуса, купон либо промо-акция
+        enum:
+          - promo_action
+          - coupon
+      title:
+        type: string
+        description: Название бонуса
+      description:
+        type: string
+        description: Описание бонуса
+      can_be_applied:
+        type: boolean
+        description: |
+          Может ли акция быть применена к корзине.
+          Может быть `false` только для акций, потому что для акции необходимо
+          выполнить ряд условий
+      cause:
+        type: string
+        default: ''
+        description: |
+          Причина, по которой акция не может быть применена к корзине.
+          Приходит только для акций, приходит когда `can_be_applied == false`
+      finish_date:
+        type: string
+        format: date
+        description: Дата окончания акции или купона
+
+  CreateOrderModel:
+    type: object
+    description: Дополнительная информация после оформления заказа
+    properties:
+      order_id:
+        type: string
+        description: id созданного заказа
+      payment_url:
+        type: string
+        description: url для онлайн оплаты заказа
+        default: ''
+
+
+  AddressModel:
+    type: object
+    description: Модель для описания адреса
+    properties:
+      street:
+        type: string
+        description: Название улицы
+      building:
+        type: string
+        description: Номер дома
+      wing:
+        type: string
+        description: Корпус
+      apartment:
+        type: string
+        description: Квартира
+      porch:
+        type: string
+        description: Подъезд
+      floor:
+        type: integer
+        description: Этаж
+
+  SearchInfoModel:
+    type: object
+    description: |
+      Данные, которые может указать пользователь, для уточнения поискового
+      запроса.
+    properties:
+      tags:
+        type: array
+        description: Список тегов
+        items:
+          $ref: '#/definitions/ProductTagModel'
+      subcategories:
+        type: array
+        description: Список подкатегорий
+        items:
+          $ref: '#/definitions/SubcategoryModel'
+      ingredients:
+        type: array
+        description: Список ингредиентов
+        items:
+          type: object
+          description: Ингредиенты
+          properties:
+            id:
+              type: string
+              description: id ингредиента
+            name:
+              type: string
+              description: Название ингредиента
+
+  SubcategoryModel:
+    type: object
+    description: Модель подкатегории в категории блюд
+    properties:
+      id:
+        type: string
+        description: id подкатегории
+      name:
+        type: string
+        description: Название подкатегории
+    required:
+      - id
+      - name
+
+  CartValidationModel:
+    type: object
+    description: Приходит после успешной валидации корзины.
+    properties:
+      product_groups:
+        type: array
+        items:
+          $ref: '#/definitions/CartProductGroupModel'
+
+  ProductTopingsModel:
+    type: object
+    description: Топинги продукта в корзине
+    properties:
+      product:
+        $ref: '#/definitions/BaseProductModel'
+      topings:
+        description: Список топингов для товара
+        type: array
+        items:
+          $ref: '#/definitions/ProductTopingItemModel'
+
+  UpdateProductAmountInCartModel:
+    type: object
+    description: |
+      Объект, который приходит после успешного изменения количества товаров в
+      корзине
+    properties:
+      product_cart_id:
+        type: string
+        description: id группы товаров в корзине
+      amount:
+        type: string
+        description: Новое количество
+
+  CouponsListModel:
+    type:
+      object
+    properties:
+      total:
+        type: integer
+        description: Количество результатов в выдаче
+      coupons:
+        type: array
+        description: |
+          Массив купонов пользователя
+        items:
+          $ref: '#/definitions/CouponsListItemModel'
+
+  CouponsListItemModel:
+    type: object
+    description: Модель купона для списка
+    properties:
+      id:
+        type: string
+        description: id купона
+      title:
+        type: string
+        description: Заголовок купона
+      image:
+        type: string
+        description: Ссылка на картинку купона
+      finish_date:
+        type: string
+        format: date
+        description: Дата окончания купона
+
+  CouponInfoModel:
+    type: object
+    description: Модель купона для отдельного экрана
+    properties:
+      id:
+        type: string
+        description: id купона
+      title:
+        type: string
+        description: Заголовок купона
+      description:
+        type: string
+        description: Поясняющий текст
+      image:
+        type: string
+        description: Ссылка на картинку купона
+      coupon_code:
+        type: string
+        description: Код купона
+      finish_date:
+        type: string
+        format: date
+        description: Дата окончания купона
+
+  ActionsListModel:
+    type:
+      object
+    properties:
+      total:
+        type: integer
+        description: Количество результатов в выдаче
+      actions:
+        type: array
+        description: |
+          Массив акций пользователя
+        items:
+          $ref: '#/definitions/ActionListItemModel'
+
+  ActionListItemModel:
+    type: object
+    description: Модель акции для списка
+    properties:
+      id:
+        type: string
+        description: id акции
+      title:
+        type: string
+        description: Заголовок акции, если есть
+      image:
+        type: string
+        description: Ссылка на картинку акции
+      date:
+        type: string
+        format: date
+        description: Дата акции
+      recomended_products:
+        type: array
+        description: Блок рекомендованых продуктов
+        items:
+          $ref: '#/definitions/BaseProductModel'
+      action_products:
+        type: array
+        description: Блок продуктов, которые учавствуют в акции
+        items:
+          $ref: '#/definitions/BaseProductModel'
+
+
+  ActionInfoModel:
+    type: object
+    description: Модель акции для отдельного экрана
+    properties:
+      id:
+        type: string
+        description: id акции
+      title:
+        type: string
+        description: Заголовок акции
+      description:
+        type: string
+        description: Поясняющий текст
+      image:
+        type: string
+        description: Ссылка на картинку акции
+      date:
+        type: string
+        format: date
+        description: Дата акции
