@@ -1880,7 +1880,7 @@ definitions:
       Amount:
         type: number
         format: double
-        description: Сумма заказа. Общая стоимость заказа без акций с учетом доставки.
+        description: Сумма заказа. Общая стоимость заказа без акций без учёта доставки.
       Odd_Amount_From:
         type: number
         format: double
