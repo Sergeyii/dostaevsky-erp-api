@@ -1929,6 +1929,9 @@ definitions:
         #type: string
         #default: ''
         #description: Код корпоративного клиента
+      Phone_No:
+        type: string
+        description: Номер телефона без кода
       PhoneCode:
         type: string
         description: Код телефона
