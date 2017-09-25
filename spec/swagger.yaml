@@ -1899,7 +1899,7 @@ definitions:
       Total_Amount:
         type: number
         format: double
-        description: Итого сумма.Сумма заказа с учетом скидок
+        description: Итого сумма.Сумма заказа с учетом скидок без учёта доставки.
       Prepayment:
         type: boolean
         description: Предоплата
