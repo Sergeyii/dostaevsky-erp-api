@@ -290,7 +290,7 @@ paths:
     post:
       summary: Передача заголовка заказа
       description: |
-       `Заметка`: используется URL /Codeunit/SitePreOrderHeader без точки в конце
+       `Заметка`: используется URL /Page/SitePreOrderHeader без точки в конце
        
        Используется метод `Create`
       tags:
